@@ -5,7 +5,7 @@ from pyspark import Row
 
 from solution.solution_start import get_latest_transaction_date
 
-
+# TODO: What is pytest fixtures?
 @pytest.mark.usefixtures("spark")
 def test_get_latest_transaction_date_returns_most_recent_date(spark):
     spark.createDataFrame([
