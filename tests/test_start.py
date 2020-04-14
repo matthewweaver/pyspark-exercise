@@ -1,11 +1,20 @@
 from datetime import datetime
 
+import tempfile
 import pytest
+from pyspark.sql.context import SQLContext
 from pyspark import Row
 
-from solution.solution_start import get_latest_transaction_date
+from solution.solution_start import \
+    get_latest_transaction_date, create_spark_views, group_transactions, run_transformations
 
-# TODO: What is pytest fixtures?
+customers_location = "../input_data/starter/customers.csv"
+products_location = "../input_data/starter/products.csv"
+transactions_location = "../input_data/starter/transactions"
+
+#TODO: Further work - rather than compare schema of dataframes, can mock the input data and compare dataframe
+
+
 @pytest.mark.usefixtures("spark")
 def test_get_latest_transaction_date_returns_most_recent_date(spark):
     spark.createDataFrame([
@@ -19,3 +28,24 @@ def test_get_latest_transaction_date_returns_most_recent_date(spark):
     actual = get_latest_transaction_date(spark)
 
     assert actual == expected
+
+@pytest.mark.usefixtures("spark")
+def test_create_spark_views(spark):
+    sql = SQLContext(spark)
+    create_spark_views(spark, customers_location, products_location, transactions_location)
+    assert sql.tableNames() == ['customers', 'products', 'raw_transactions']
+
+@pytest.mark.usefixtures("spark")
+def test_group_transactions(spark):
+    sql = SQLContext(spark)
+    group_transactions(spark)
+    schema = spark.sql("""SELECT * FROM transactions_grouped""").schema
+    assert "transactions_grouped" in sql.tableNames()
+    assert str(schema) == "StructType(List(StructField(customer_id,StringType,true),StructField(product_id,StringType,true),StructField(count,LongType,false)))"
+
+@pytest.mark.usefixtures("spark")
+def test_run_transformations(spark):
+    with tempfile.TemporaryDirectory() as output_location:
+        run_transformations(spark, customers_location, products_location, transactions_location, output_location)
+        output = spark.read.csv(output_location)
+        assert str(output.schema) == "StructType(List(StructField(_c0,StringType,true),StructField(_c1,StringType,true),StructField(_c2,StringType,true),StructField(_c3,StringType,true),StructField(_c4,StringType,true)))"

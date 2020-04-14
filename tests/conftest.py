@@ -16,9 +16,3 @@ def spark():
     )
     return spark
 
-
-@pytest.fixture(scope="function")
-def tmp_dir():
-    output_dir = mkdtemp()
-    yield output_dir
-    shutil.rmtree(output_dir)
