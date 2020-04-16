@@ -38,14 +38,15 @@ def test_create_spark_views(spark):
 @pytest.mark.usefixtures("spark")
 def test_group_transactions(spark):
     sql = SQLContext(spark)
+    create_spark_views(spark, customers_location, products_location, transactions_location)
     group_transactions(spark)
-    schema = spark.sql("""SELECT * FROM transactions_grouped""").schema
+    columns = spark.sql("""SELECT * FROM transactions_grouped""").columns
     assert "transactions_grouped" in sql.tableNames()
-    assert str(schema) == "StructType(List(StructField(customer_id,StringType,true),StructField(product_id,StringType,true),StructField(count,LongType,false)))"
+    assert columns == ["customer_id", "product_id", "count"]
 
 @pytest.mark.usefixtures("spark")
 def test_run_transformations(spark):
     with tempfile.TemporaryDirectory() as output_location:
         run_transformations(spark, customers_location, products_location, transactions_location, output_location)
-        output = spark.read.csv(output_location)
-        assert str(output.schema) == "StructType(List(StructField(_c0,StringType,true),StructField(_c1,StringType,true),StructField(_c2,StringType,true),StructField(_c3,StringType,true),StructField(_c4,StringType,true)))"
+        columns = spark.read.csv(output_location, header="true").columns
+        assert columns == ["customer_id", "loyalty_score", "product_id", "product_category", "purchase_count"]
